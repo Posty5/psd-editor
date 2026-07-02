@@ -1,8 +1,16 @@
 {
-  "name": "psd-editor",
+  "name": "@posty5/psd-editor",
   "version": "1.0.0",
-  "description": "Render PSD templates to PNG by replacing image and text layers.",
+  "description": "Edit PSD templates — replace image and text layers, save the edited PSD, and render PNG. Single class API.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Posty5/psd-editor.git"
+  },
+  "homepage": "https://github.com/Posty5/psd-editor#readme",
+  "bugs": {
+    "url": "https://github.com/Posty5/psd-editor/issues"
+  },
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

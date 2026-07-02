@@ -1,39 +1,38 @@
-# psd-editor
+# @posty5/psd-editor
 
-Edit reusable Photoshop PSD templates — replace named image and text layers, save the edited PSD, and render a PNG. The package exposes a single `PsdEditor` class with one main method. Written in TypeScript with ESM, CommonJS, and generated type declarations.
-
----
-
-## Features
-
-- **Single class API** — one import, one method
-- Replace image layers by layer name or full layer path
-- Replace editable text layers while preserving their original area and styling
-- Use local image paths, HTTP/HTTPS image URLs, `Buffer`, or `Uint8Array`
-- Save the edited PSD file back to disk
-- Render the result to PNG
-- Automatic cleanup of downloaded remote images after each operation
-- Preserve placeholder alpha masks and non-rectangular image shapes
-- Render solid vector layers found in the template
-- Detect RTL text automatically while keeping English and other LTR text unchanged
-- ESM and CommonJS support with first-class TypeScript types
+Edit reusable Photoshop PSD templates — replace named image and text layers, save the edited PSD, and render a PNG. One class, one method, zero hassle.
 
 ---
 
-## Installation
+## 🌟 What is @posty5/psd-editor?
+
+**@posty5/psd-editor** is a Node.js package that lets you programmatically edit PSD templates. It exposes a single `PsdEditor` class with one main method — `edit()` — making integration as simple as possible.
+
+- 🖼️ **Replace Image Layers** — Swap placeholders with local files or remote URLs
+- ✏️ **Replace Text Layers** — Update text content with automatic RTL detection
+- 💾 **Save Edited PSD** — Write the modified PSD back to disk
+- 🎨 **Render PNG** — Flatten and export the result as a PNG image
+- 🧹 **Auto Cleanup** — Downloaded remote images are released from memory automatically
+- 📦 **Single API** — One class, one method, typed with TypeScript
+
+**Part of the Posty5 ecosystem:** [https://posty5.com](https://posty5.com)
+
+---
+
+## 📦 Installation
 
 ```bash
-npm install psd-editor
+npm install @posty5/psd-editor
 ```
 
-`canvas` is a native dependency. Some Linux environments require Cairo/Pango system packages; follow the [node-canvas installation guide](https://github.com/Automattic/node-canvas#compiling) if npm cannot install its prebuilt binary.
+> **Note:** `canvas` is a native dependency. Some Linux environments require Cairo/Pango system packages. Follow the [node-canvas installation guide](https://github.com/Automattic/node-canvas#compiling) if npm cannot install its prebuilt binary.
 
 ---
 
-## Basic usage
+## 🚀 Quick Start
 
-```ts
-import { PsdEditor } from 'psd-editor';
+```typescript
+import { PsdEditor } from '@posty5/psd-editor';
 
 const editor = new PsdEditor();
 
@@ -47,7 +46,6 @@ const result = await editor.edit({
     TITLE_1: 'A new English title',
     'AR/front/Trend Now/التريند الآن': 'التريند الآن'
   },
-  description: 'Daily social media card',
   psdOutputPath: './output/edited.psd',
   pngOutputPath: './output/social-post.png'
 });
@@ -59,7 +57,7 @@ console.log(result.width, result.height);
 
 If output paths are omitted, use the returned buffer directly:
 
-```ts
+```typescript
 const { pngBuffer } = await editor.edit({
   templatePath: './template.psd',
   images: { PHOTO: './photo.jpg' }
@@ -70,37 +68,93 @@ await uploadSomewhere(pngBuffer);
 
 ---
 
-## Image sources
+## 📚 API Documentation
 
-Each value in `images` can be one of the following:
+### `PsdEditor` Class
 
-```ts
+The main entry point. Create an instance and call `edit()`:
+
+```typescript
+import { PsdEditor } from '@posty5/psd-editor';
+
+const editor = new PsdEditor();
+```
+
+---
+
+### `editor.edit(options)` — Edit a PSD Template
+
+Replace image and text layers, save the edited PSD, and render a PNG.
+
+**Parameters:**
+
+```typescript
+interface EditOptions {
+  templatePath: string;                        // Path to the source PSD template
+  images?: Record<string, ImageSource>;        // Layer name → image source
+  texts?: Record<string, string>;              // Layer name → replacement text
+  description?: string;                        // Optional label for the result
+  psdOutputPath?: string;                      // Save edited PSD to this path
+  pngOutputPath?: string;                      // Save rendered PNG to this path
+  remoteImages?: {
+    timeoutMs?: number;                        // Download timeout (default: 15s)
+    maxBytes?: number;                         // Max download size (default: 20 MiB)
+    headers?: Record<string, string>;          // HTTP headers for remote downloads
+  };
+  logger?: (message: string) => void;          // Progress callback
+}
+```
+
+**Returns:**
+
+```typescript
+interface EditResult {
+  pngBuffer: Buffer;       // Rendered PNG data
+  width: number;           // Image width in pixels
+  height: number;          // Image height in pixels
+  description?: string;    // Label when provided
+  pngOutputPath?: string;  // Absolute path when pngOutputPath was set
+  psdOutputPath?: string;  // Absolute path when psdOutputPath was set
+}
+```
+
+---
+
+### `PsdEditor.listLayers(templatePath)` — Inspect Template Layers
+
+Static method. Returns every layer path in template order as `string[]`.
+
+```typescript
+import { PsdEditor } from '@posty5/psd-editor';
+
+const layers = PsdEditor.listLayers('./template.psd');
+console.log(layers);
+// ['Background', 'Group/IMAGE_1', 'Group/TITLE_1', ...]
+```
+
+Layer matching is case-insensitive. If the same name occurs more than once, pass its full path to remove ambiguity.
+
+---
+
+## 🖼️ Image Sources
+
+Each value in `images` accepts one of the following:
+
+```typescript
 type ImageSource = string | URL | Buffer | Uint8Array;
 ```
 
-### Local files
+| Source Type | Example | Notes |
+| --- | --- | --- |
+| **Local file** | `'./assets/cover.jpg'` | Resolved from `process.cwd()` |
+| **Remote URL** | `'https://cdn.example.com/photo.png'` | Downloaded automatically |
+| **URL object** | `new URL('https://...')` | Same as string URL |
+| **Buffer** | `fs.readFileSync('./img.png')` | In-memory image data |
+| **Uint8Array** | Raw byte array | Converted to Buffer internally |
 
-Relative local paths are resolved from `process.cwd()`:
+### Remote Image Configuration
 
-```ts
-images: {
-  COVER: './assets/cover.jpg'
-}
-```
-
-### Remote image URLs
-
-HTTP and HTTPS URLs are downloaded into memory automatically:
-
-```ts
-images: {
-  AVATAR: 'https://images.example.com/avatar.webp'
-}
-```
-
-Remote downloads default to a 15-second timeout and a 20 MiB maximum size. Both are configurable:
-
-```ts
+```typescript
 await editor.edit({
   templatePath: './template.psd',
   images: {
@@ -116,118 +170,51 @@ await editor.edit({
 });
 ```
 
-> **Automatic cleanup** — All downloaded remote images are released from memory after `edit()` completes, even if an error occurs.
+> **🧹 Automatic cleanup** — All downloaded remote images are released from memory after `edit()` completes, even if an error occurs.
 
-> **Important image notes**
->
-> - Remote images are fully downloaded into memory before decoding. Choose a sensible `maxBytes` value for your server.
-> - The caller is responsible for deciding which URLs are trusted. Do not pass arbitrary user-controlled URLs from an untrusted request without SSRF protection.
-> - Redirects follow the standard Node.js `fetch` behavior.
-> - Supported formats are determined by the installed `canvas` build. PNG and JPEG are the safest choices; WebP/GIF/SVG support can vary by platform.
-> - Images use a centered `cover` crop and retain the alpha shape of the original placeholder layer or mask.
+> **⚠️ Security** — The caller is responsible for URL trust. Do not pass arbitrary user-controlled URLs without SSRF protection.
 
 ---
 
-## Finding layer names
+## ✏️ Text and Fonts
 
-Use the static `listLayers` method to inspect all slash-separated paths:
-
-```ts
-import { PsdEditor } from 'psd-editor';
-
-console.log(PsdEditor.listLayers('./template.psd'));
-```
-
-Layer matching is case-insensitive. If the same name occurs more than once, pass its full path to remove ambiguity.
-
----
-
-## Text and fonts
-
-```ts
+```typescript
 texts: {
   TITLE: 'English title',
   ARABIC_TITLE: 'عنوان عربي'
 }
 ```
 
-The package detects text direction from the content. It does not lock a template to Arabic or English.
+**Key behaviors:**
 
-Fonts referenced by the PSD must be installed on the operating system where rendering runs. PSD files store the font name, not the font file. If a font is missing, `canvas`/Pango uses a fallback font. On Ubuntu, install fonts in `~/.local/share/fonts` or `/usr/local/share/fonts`, then run `fc-cache -f`.
+- 🔄 **Auto-direction** — RTL/LTR is detected from content, not locked to the template
+- 📐 **Auto-fit** — Text is scaled to fit within the original layer bounds
+- 🔤 **System fonts** — Fonts referenced by the PSD must be installed on the OS
 
-Text is fitted into the original layer bounds. Complex Photoshop typography—multiple style runs, advanced tracking, warping, and paragraph composition—cannot be reproduced exactly by `canvas`.
-
----
-
-## API
-
-### `PsdEditor`
-
-The main class. Create an instance and call `edit()`:
-
-```ts
-const editor = new PsdEditor();
-```
-
-### `editor.edit(options)`
-
-```ts
-interface EditOptions {
-  templatePath: string;
-  images?: Record<string, ImageSource>;
-  texts?: Record<string, string>;
-  description?: string;
-  psdOutputPath?: string;
-  pngOutputPath?: string;
-  remoteImages?: {
-    timeoutMs?: number;
-    maxBytes?: number;
-    headers?: Record<string, string>;
-  };
-  logger?: (message: string) => void;
-}
-```
-
-Returns:
-
-```ts
-interface EditResult {
-  pngBuffer: Buffer;
-  width: number;
-  height: number;
-  description?: string;
-  pngOutputPath?: string;
-  psdOutputPath?: string;
-}
-```
-
-### `PsdEditor.listLayers(templatePath)`
-
-Static method. Returns every layer path in template order as `string[]`.
+> **Tip:** On Ubuntu, install fonts in `~/.local/share/fonts` or `/usr/local/share/fonts`, then run `fc-cache -f`.
 
 ---
 
-## Runtime dependencies
+## 🔧 Runtime Dependencies
 
 | Package | Purpose |
 | --- | --- |
 | [`ag-psd`](https://www.npmjs.com/package/ag-psd) | Read and write PSD structure, layer data, masks, vectors, and text metadata |
 | [`canvas`](https://www.npmjs.com/package/canvas) | Decode images and render the final PNG |
 
-No separate HTTP client is used; remote images use the Node.js `fetch` implementation.
+No separate HTTP client is used — remote images use the built-in Node.js `fetch`.
 
 ---
 
-## Compatibility
+## 💻 Node.js Compatibility
 
-- Node.js 18 or newer
-- ESM and CommonJS
-- TypeScript declarations included
-- Windows, macOS, and Linux where `canvas` is supported
+- **Node.js**: >= 18.0.0
+- **Module Systems**: ESM and CommonJS
+- **TypeScript**: Full type definitions included
 
 ---
 
-## Development
+## 🛠️ Development
 
 ```bash
 npm install
@@ -236,7 +223,7 @@ npm test
 npm run build
 ```
 
-To inspect exactly what npm will publish:
+To inspect what npm will publish:
 
 ```bash
 npm pack --dry-run
@@ -244,6 +231,20 @@ npm pack --dry-run
 
 ---
 
-## License
+## 📄 License
 
-MIT
+MIT — see [LICENSE](./LICENSE) for details.
+
+---
+
+## 🔗 Useful Links
+
+- **Website**: [https://posty5.com](https://posty5.com)
+- **Dashboard**: [studio.posty5.com/account/settings?tab=APIKeys](studio.posty5.com/account/settings?tab=APIKeys)
+- **API Documentation**: [https://docs.posty5.com](https://docs.posty5.com)
+- **GitHub**: [https://github.com/Posty5/npm-sdk](https://github.com/Posty5/npm-sdk)
+
+---
+
+Made with ❤️ by the Posty5 team
+
