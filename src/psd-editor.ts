@@ -10,7 +10,7 @@ import type { EditOptions, EditResult } from './types.js';
 /**
  * Single entry-point for editing PSD templates.
  *
- * Replace image and text layers, save the edited PSD, and render a PNG —
+ * Replace image and text layers, save the edited PSD, and render an image —
  * all through the {@link edit} method.
  *
  * @example
@@ -21,14 +21,16 @@ import type { EditOptions, EditResult } from './types.js';
  * const result = await editor.edit({
  *   templatePath: './template.psd',
  *   images: { PHOTO: './photo.jpg' },
- *   pngOutputPath: './output.png',
+ *   outputFormat: 'jpeg',
+ *   quality: 0.9,
+ *   outputPath: './output.jpg',
  * });
  * ```
  */
 export class PsdEditor {
   /**
    * Edit a PSD template: replace image/text layers, optionally save the
-   * edited PSD, and render a PNG.
+   * edited PSD, and render an image (PNG or JPEG).
    *
    * Remote images (HTTP/HTTPS URLs) are downloaded automatically and
    * cleaned up after the operation completes — even when an error occurs.
@@ -36,6 +38,9 @@ export class PsdEditor {
   async edit(options: EditOptions): Promise<EditResult> {
     this.validateOptions(options);
 
+    const scale = options.scale ?? 1;
+    const outputFormat = options.outputFormat ?? 'png';
+    const quality = options.quality ?? 0.92;
     const downloadedBuffers: Buffer[] = [];
 
     try {
@@ -77,25 +82,34 @@ export class PsdEditor {
         options.logger?.(`Wrote PSD: ${psdOutputPath}`);
       }
 
-      // Render PNG
-      const canvas = renderPsd(psd);
-      const pngBuffer = canvas.toBuffer('image/png');
+      // Render image
+      const canvas = renderPsd(psd, scale);
+      const renderedWidth = canvas.width;
+      const renderedHeight = canvas.height;
 
-      // Save the rendered PNG when requested
-      let pngOutputPath: string | undefined;
-      if (options.pngOutputPath) {
-        pngOutputPath = path.resolve(options.pngOutputPath);
-        fs.mkdirSync(path.dirname(pngOutputPath), { recursive: true });
-        fs.writeFileSync(pngOutputPath, pngBuffer);
-        options.logger?.(`Wrote PNG: ${pngOutputPath}`);
+      const imageBuffer =
+        outputFormat === 'jpeg'
+          ? canvas.toBuffer('image/jpeg', { quality })
+          : canvas.toBuffer('image/png');
+
+      // Save the rendered image when requested
+      let outputPath: string | undefined;
+      if (options.outputPath) {
+        outputPath = path.resolve(options.outputPath);
+        fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+        fs.writeFileSync(outputPath, imageBuffer);
+        options.logger?.(`Wrote ${outputFormat.toUpperCase()}: ${outputPath}`);
       }
 
       return {
-        pngBuffer,
+        imageBuffer,
         width: psd.width,
         height: psd.height,
+        renderedWidth,
+        renderedHeight,
+        outputFormat,
         ...(options.description ? { description: options.description } : {}),
-        ...(pngOutputPath ? { pngOutputPath } : {}),
+        ...(outputPath ? { outputPath } : {}),
         ...(psdOutputPath ? { psdOutputPath } : {})
       };
     } finally {
@@ -120,6 +134,24 @@ export class PsdEditor {
     }
     if (typeof options.templatePath !== 'string' || options.templatePath.trim() === '') {
       throw new TypeError('templatePath must be a non-empty string');
+    }
+    if (options.scale !== undefined) {
+      if (typeof options.scale !== 'number' || !Number.isFinite(options.scale) || options.scale <= 0) {
+        throw new RangeError('scale must be a positive finite number (e.g. 1, 2, 3)');
+      }
+    }
+    if (options.outputFormat !== undefined && options.outputFormat !== 'png' && options.outputFormat !== 'jpeg') {
+      throw new TypeError('outputFormat must be "png" or "jpeg"');
+    }
+    if (options.quality !== undefined) {
+      if (
+        typeof options.quality !== 'number' ||
+        !Number.isFinite(options.quality) ||
+        options.quality < 0 ||
+        options.quality > 1
+      ) {
+        throw new RangeError('quality must be a number between 0 and 1');
+      }
     }
   }
 }

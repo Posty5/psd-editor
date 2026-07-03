@@ -96,6 +96,7 @@ interface EditOptions {
   description?: string;                        // Optional label for the result
   psdOutputPath?: string;                      // Save edited PSD to this path
   pngOutputPath?: string;                      // Save rendered PNG to this path
+  scale?: number;                              // Output resolution multiplier (default: 1)
   remoteImages?: {
     timeoutMs?: number;                        // Download timeout (default: 15s)
     maxBytes?: number;                         // Max download size (default: 20 MiB)
@@ -109,12 +110,14 @@ interface EditOptions {
 
 ```typescript
 interface EditResult {
-  pngBuffer: Buffer;       // Rendered PNG data
-  width: number;           // Image width in pixels
-  height: number;          // Image height in pixels
-  description?: string;    // Label when provided
-  pngOutputPath?: string;  // Absolute path when pngOutputPath was set
-  psdOutputPath?: string;  // Absolute path when psdOutputPath was set
+  pngBuffer: Buffer;         // Rendered PNG data
+  width: number;             // Logical PSD width in pixels (before scale)
+  height: number;            // Logical PSD height in pixels (before scale)
+  renderedWidth: number;     // Actual PNG width (width × scale)
+  renderedHeight: number;    // Actual PNG height (height × scale)
+  description?: string;      // Label when provided
+  pngOutputPath?: string;    // Absolute path when pngOutputPath was set
+  psdOutputPath?: string;    // Absolute path when psdOutputPath was set
 }
 ```
 
@@ -135,6 +138,30 @@ console.log(layers);
 Layer matching is case-insensitive. If the same name occurs more than once, pass its full path to remove ambiguity.
 
 ---
+
+## 🔍 High-Quality Output
+
+Use the `scale` option to render the PNG at a higher resolution than the native PSD size. This is ideal for print, Retina displays, or any output that requires more pixels.
+
+| `scale` | Output size for a 1254×960 PSD |
+| --- | --- |
+| `1` (default) | 1254 × 960 px |
+| `2` | 2508 × 1920 px |
+| `3` | 3762 × 2880 px |
+
+```typescript
+const result = await editor.edit({
+  templatePath: './template.psd',
+  images: { PHOTO: './photo.jpg' },
+  pngOutputPath: './output/result@2x.png',
+  scale: 2  // renders at 2× resolution
+});
+
+console.log(result.width);          // 1254 — logical PSD width
+console.log(result.renderedWidth);  // 2508 — actual PNG pixel width
+```
+
+> `scale` must be a positive number. Fractional values (e.g. `0.5`) are also accepted to downscale.
 
 ## 🖼️ Image Sources
 

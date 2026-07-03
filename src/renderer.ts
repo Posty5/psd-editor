@@ -2,10 +2,14 @@ import type { Canvas, CanvasRenderingContext2D, GlobalCompositeOperation } from 
 import { createCanvas } from 'canvas';
 import type { Color, Layer, Psd } from 'ag-psd';
 
-export function renderPsd(psd: Psd): Canvas {
-  const canvas = createCanvas(psd.width, psd.height);
+export function renderPsd(psd: Psd, scale = 1): Canvas {
+  const s = Math.max(0.01, scale);
+  const canvasWidth = Math.round(psd.width * s);
+  const canvasHeight = Math.round(psd.height * s);
+  const canvas = createCanvas(canvasWidth, canvasHeight);
   const context = canvas.getContext('2d');
-  context.clearRect(0, 0, psd.width, psd.height);
+  context.clearRect(0, 0, canvasWidth, canvasHeight);
+  context.scale(s, s);
   drawChildren(context, psd.children ?? []);
   return canvas;
 }

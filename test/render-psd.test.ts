@@ -23,18 +23,19 @@ describe('PsdEditor.edit', () => {
     const fixture = createFixture();
     const redImage = createPng('#ff0000');
     const imagePath = path.join(fixture.directory, 'red.png');
-    const pngOutputPath = path.join(fixture.directory, 'nested', 'result.png');
+    const outputPath = path.join(fixture.directory, 'nested', 'result.png');
     fs.writeFileSync(imagePath, redImage);
 
     const result = await editor.edit({
       templatePath: fixture.templatePath,
       images: { PHOTO: imagePath },
-      pngOutputPath
+      outputPath
     });
 
-    expect(result.pngOutputPath).toBe(path.resolve(pngOutputPath));
-    expect(fs.existsSync(pngOutputPath)).toBe(true);
-    expect(await readPixel(result.pngBuffer, 10, 10)).toEqual([255, 0, 0, 255]);
+    expect(result.outputPath).toBe(path.resolve(outputPath));
+    expect(fs.existsSync(outputPath)).toBe(true);
+    expect(result.outputFormat).toBe('png');
+    expect(await readPixel(result.imageBuffer, 10, 10)).toEqual([255, 0, 0, 255]);
   });
 
   it('downloads and uses an HTTP image URL', async () => {
@@ -57,7 +58,7 @@ describe('PsdEditor.edit', () => {
         templatePath: fixture.templatePath,
         images: { PHOTO: `http://127.0.0.1:${address.port}/image.png` }
       });
-      expect(await readPixel(result.pngBuffer, 10, 10)).toEqual([0, 0, 255, 255]);
+      expect(await readPixel(result.imageBuffer, 10, 10)).toEqual([0, 0, 255, 255]);
     } finally {
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));
@@ -70,20 +71,20 @@ describe('PsdEditor.edit', () => {
     const redImage = createPng('#ff0000');
     const imagePath = path.join(fixture.directory, 'red.png');
     const psdOutputPath = path.join(fixture.directory, 'edited.psd');
-    const pngOutputPath = path.join(fixture.directory, 'result.png');
+    const outputPath = path.join(fixture.directory, 'result.png');
     fs.writeFileSync(imagePath, redImage);
 
     const result = await editor.edit({
       templatePath: fixture.templatePath,
       images: { PHOTO: imagePath },
       psdOutputPath,
-      pngOutputPath
+      outputPath
     });
 
     expect(result.psdOutputPath).toBe(path.resolve(psdOutputPath));
     expect(fs.existsSync(psdOutputPath)).toBe(true);
-    expect(result.pngOutputPath).toBe(path.resolve(pngOutputPath));
-    expect(fs.existsSync(pngOutputPath)).toBe(true);
+    expect(result.outputPath).toBe(path.resolve(outputPath));
+    expect(fs.existsSync(outputPath)).toBe(true);
   });
 
   it('returns buffer only when no output paths are provided', async () => {
@@ -97,9 +98,30 @@ describe('PsdEditor.edit', () => {
       images: { PHOTO: imagePath }
     });
 
-    expect(result.pngBuffer).toBeInstanceOf(Buffer);
-    expect(result.pngOutputPath).toBeUndefined();
+    expect(result.imageBuffer).toBeInstanceOf(Buffer);
+    expect(result.outputPath).toBeUndefined();
     expect(result.psdOutputPath).toBeUndefined();
+  });
+
+  it('renders JPEG with quality option', async () => {
+    const fixture = createFixture();
+    const redImage = createPng('#ff0000');
+    const imagePath = path.join(fixture.directory, 'red.png');
+    const outputPath = path.join(fixture.directory, 'result.jpg');
+    fs.writeFileSync(imagePath, redImage);
+
+    const result = await editor.edit({
+      templatePath: fixture.templatePath,
+      images: { PHOTO: imagePath },
+      outputFormat: 'jpeg',
+      quality: 0.8,
+      outputPath
+    });
+
+    expect(result.outputFormat).toBe('jpeg');
+    expect(result.imageBuffer).toBeInstanceOf(Buffer);
+    expect(result.imageBuffer.length).toBeGreaterThan(0);
+    expect(fs.existsSync(outputPath)).toBe(true);
   });
 });
 
@@ -132,19 +154,26 @@ describe('Real template integration', () => {
       texts: {
         TITLE_1: 'Hello from psd-editor!'
       },
+      scale: 2,
+      outputFormat: 'jpeg',
+      quality: 1,
       psdOutputPath: path.join(outputDir, 'edited.psd'),
-      pngOutputPath: path.join(outputDir, 'result.png'),
+      outputPath: path.join(outputDir, 'result.jpg'),
       logger: console.log
     });
 
-    expect(result.pngOutputPath).toBeDefined();
+    expect(result.outputPath).toBeDefined();
     expect(result.psdOutputPath).toBeDefined();
-    expect(fs.existsSync(result.pngOutputPath!)).toBe(true);
+    expect(fs.existsSync(result.outputPath!)).toBe(true);
     expect(fs.existsSync(result.psdOutputPath!)).toBe(true);
+    expect(result.outputFormat).toBe('jpeg');
     expect(result.width).toBeGreaterThan(0);
     expect(result.height).toBeGreaterThan(0);
+    // 2x scale: rendered dimensions must be double the logical PSD dimensions
+    expect(result.renderedWidth).toBe(result.width * 2);
+    expect(result.renderedHeight).toBe(result.height * 2);
 
-    console.log(`\n✅ Preview output at:\n  PNG: ${result.pngOutputPath}\n  PSD: ${result.psdOutputPath}\n`);
+    console.log(`\n✅ Preview output at:\n  JPEG: ${result.outputPath} (${result.renderedWidth}x${result.renderedHeight} @ 2x, quality 0.92)\n  PSD: ${result.psdOutputPath}\n`);
   });
 });
 
