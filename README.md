@@ -1,6 +1,6 @@
 # @posty5/psd-editor
 
-Edit reusable Photoshop PSD templates — replace named image and text layers, save the edited PSD, and render a PNG. One class, one method, zero hassle.
+Edit reusable Photoshop PSD templates — replace named image and text layers, save the edited PSD, and render a PNG or JPEG. One class, one method, zero hassle.
 
 ---
 
@@ -11,7 +11,9 @@ Edit reusable Photoshop PSD templates — replace named image and text layers, s
 - 🖼️ **Replace Image Layers** — Swap placeholders with local files or remote URLs
 - ✏️ **Replace Text Layers** — Update text content with automatic RTL detection
 - 💾 **Save Edited PSD** — Write the modified PSD back to disk
-- 🎨 **Render PNG** — Flatten and export the result as a PNG image
+- 🎨 **Render PNG or JPEG** — Flatten and export the result in your preferred format
+- 🔍 **High-Quality Output** — Scale up to 2×, 3×, or any multiplier for Retina/print
+- 🎯 **JPEG Quality Control** — Fine-tune compression between 0 (smallest) and 1 (best)
 - 🧹 **Auto Cleanup** — Downloaded remote images are released from memory automatically
 - 📦 **Single API** — One class, one method, typed with TypeScript
 
@@ -46,11 +48,13 @@ const result = await editor.edit({
     TITLE_1: 'A new English title',
     'AR/front/Trend Now/التريند الآن': 'التريند الآن'
   },
+  outputFormat: 'jpeg',
+  quality: 0.92,
   psdOutputPath: './output/edited.psd',
-  pngOutputPath: './output/social-post.png'
+  outputPath: './output/social-post.jpg'
 });
 
-console.log(result.pngOutputPath); // absolute path to the rendered PNG
+console.log(result.outputPath);   // absolute path to the rendered image
 console.log(result.psdOutputPath); // absolute path to the edited PSD
 console.log(result.width, result.height);
 ```
@@ -58,12 +62,12 @@ console.log(result.width, result.height);
 If output paths are omitted, use the returned buffer directly:
 
 ```typescript
-const { pngBuffer } = await editor.edit({
+const { imageBuffer } = await editor.edit({
   templatePath: './template.psd',
   images: { PHOTO: './photo.jpg' }
 });
 
-await uploadSomewhere(pngBuffer);
+await uploadSomewhere(imageBuffer);
 ```
 
 ---
@@ -84,7 +88,7 @@ const editor = new PsdEditor();
 
 ### `editor.edit(options)` — Edit a PSD Template
 
-Replace image and text layers, save the edited PSD, and render a PNG.
+Replace image and text layers, save the edited PSD, and render an image.
 
 **Parameters:**
 
@@ -95,8 +99,10 @@ interface EditOptions {
   texts?: Record<string, string>;              // Layer name → replacement text
   description?: string;                        // Optional label for the result
   psdOutputPath?: string;                      // Save edited PSD to this path
-  pngOutputPath?: string;                      // Save rendered PNG to this path
-  scale?: number;                              // Output resolution multiplier (default: 1)
+  outputPath?: string;                         // Save rendered image to this path
+  outputFormat?: 'png' | 'jpeg';              // Output format (default: 'png')
+  quality?: number;                            // JPEG quality 0–1 (default: 0.92)
+  scale?: number;                              // Resolution multiplier (default: 1)
   remoteImages?: {
     timeoutMs?: number;                        // Download timeout (default: 15s)
     maxBytes?: number;                         // Max download size (default: 20 MiB)
@@ -110,13 +116,14 @@ interface EditOptions {
 
 ```typescript
 interface EditResult {
-  pngBuffer: Buffer;         // Rendered PNG data
+  imageBuffer: Buffer;       // Rendered image data (PNG or JPEG)
+  outputFormat: 'png' | 'jpeg'; // Format of imageBuffer
   width: number;             // Logical PSD width in pixels (before scale)
   height: number;            // Logical PSD height in pixels (before scale)
-  renderedWidth: number;     // Actual PNG width (width × scale)
-  renderedHeight: number;    // Actual PNG height (height × scale)
+  renderedWidth: number;     // Actual image width (width × scale)
+  renderedHeight: number;    // Actual image height (height × scale)
   description?: string;      // Label when provided
-  pngOutputPath?: string;    // Absolute path when pngOutputPath was set
+  outputPath?: string;       // Absolute path when outputPath was set
   psdOutputPath?: string;    // Absolute path when psdOutputPath was set
 }
 ```
@@ -139,9 +146,63 @@ Layer matching is case-insensitive. If the same name occurs more than once, pass
 
 ---
 
-## 🔍 High-Quality Output
+## 🎯 Output Format & Quality
 
-Use the `scale` option to render the PNG at a higher resolution than the native PSD size. This is ideal for print, Retina displays, or any output that requires more pixels.
+Control the output format and compression quality via `outputFormat` and `quality`.
+
+### PNG (default — lossless)
+
+```typescript
+const result = await editor.edit({
+  templatePath: './template.psd',
+  images: { PHOTO: './photo.jpg' },
+  outputFormat: 'png',          // lossless, larger file
+  outputPath: './output/result.png'
+});
+```
+
+### JPEG (lossy — smaller file size)
+
+```typescript
+const result = await editor.edit({
+  templatePath: './template.psd',
+  images: { PHOTO: './photo.jpg' },
+  outputFormat: 'jpeg',
+  quality: 0.9,                 // 0 = smallest file, 1 = best quality
+  outputPath: './output/result.jpg'
+});
+```
+
+| `quality` | Description |
+| --- | --- |
+| `1.0` | Maximum quality, largest file |
+| `0.92` | Default — excellent quality, good compression |
+| `0.8` | Good quality, noticeably smaller file |
+| `0.6` | Moderate quality, very small file |
+| `0` | Minimum quality, smallest file |
+
+> `quality` only applies when `outputFormat` is `'jpeg'`. It is ignored for PNG.
+
+### Using the buffer directly
+
+```typescript
+const result = await editor.edit({
+  templatePath: './template.psd',
+  images: { PHOTO: './photo.jpg' },
+  outputFormat: 'jpeg',
+  quality: 0.85
+});
+
+// result.imageBuffer — ready to upload, stream, or store
+console.log(result.outputFormat); // 'jpeg'
+await s3.putObject({ Body: result.imageBuffer, ContentType: 'image/jpeg' });
+```
+
+---
+
+## 🔍 High-Quality Output (scale)
+
+Use the `scale` option to render the image at a higher resolution than the native PSD size. Ideal for print, Retina displays, or any output that requires more pixels.
 
 | `scale` | Output size for a 1254×960 PSD |
 | --- | --- |
@@ -153,15 +214,19 @@ Use the `scale` option to render the PNG at a higher resolution than the native 
 const result = await editor.edit({
   templatePath: './template.psd',
   images: { PHOTO: './photo.jpg' },
-  pngOutputPath: './output/result@2x.png',
-  scale: 2  // renders at 2× resolution
+  outputFormat: 'jpeg',
+  quality: 0.92,
+  scale: 2,                     // 2× resolution
+  outputPath: './output/result@2x.jpg'
 });
 
 console.log(result.width);          // 1254 — logical PSD width
-console.log(result.renderedWidth);  // 2508 — actual PNG pixel width
+console.log(result.renderedWidth);  // 2508 — actual pixel width in the file
 ```
 
 > `scale` must be a positive number. Fractional values (e.g. `0.5`) are also accepted to downscale.
+
+---
 
 ## 🖼️ Image Sources
 
@@ -227,7 +292,7 @@ texts: {
 | Package | Purpose |
 | --- | --- |
 | [`ag-psd`](https://www.npmjs.com/package/ag-psd) | Read and write PSD structure, layer data, masks, vectors, and text metadata |
-| [`canvas`](https://www.npmjs.com/package/canvas) | Decode images and render the final PNG |
+| [`canvas`](https://www.npmjs.com/package/canvas) | Decode images and render the final PNG or JPEG |
 
 No separate HTTP client is used — remote images use the built-in Node.js `fetch`.
 
@@ -274,4 +339,3 @@ MIT — see [LICENSE](./LICENSE) for details.
 ---
 
 Made with ❤️ by the Posty5 team
-
