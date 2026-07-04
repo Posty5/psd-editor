@@ -280,7 +280,7 @@ texts: {
 **Key behaviors:**
 
 - 🔄 **Auto-direction** — RTL/LTR is detected from content, not locked to the template
-- 📐 **Auto-fit** — Text is scaled to fit within the original layer bounds
+- 📐 **Original size** — Replacement text keeps the font size defined by the PSD layer
 - 🔤 **System fonts** — Fonts referenced by the PSD must be installed on the OS
 
 > **Tip:** On Ubuntu, install fonts in `~/.local/share/fonts` or `/usr/local/share/fonts`, then run `fc-cache -f`.

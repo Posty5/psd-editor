@@ -135,21 +135,10 @@ function redrawTextLayer(layer: Layer): void {
   const family = style.font?.name || 'sans-serif';
   const weight = style.fauxBold ? 'bold' : 'normal';
   const fontStyle = style.fauxItalic ? 'italic' : 'normal';
-  let fontSize = Math.max(6, Math.round(style.fontSize || height * 0.75));
+  const fontSize = Math.max(6, Math.round(style.fontSize || height * 0.75));
 
   context.direction = isRtl ? 'rtl' : 'ltr';
-  const setFont = (): void => {
-    context.font = `${fontStyle} ${weight} ${fontSize}px "${family}", sans-serif`;
-  };
-  setFont();
-
-  // Keep the replacement inside the placeholder without changing its position.
-  while (fontSize > 6) {
-    const widestLine = Math.max(...lines.map((line) => context.measureText(line || ' ').width));
-    if (widestLine <= width && lines.length * fontSize * 1.2 <= height) break;
-    fontSize -= 1;
-    setFont();
-  }
+  context.font = `${fontStyle} ${weight} ${fontSize}px "${family}", sans-serif`;
 
   const justification = text.paragraphStyle?.justification;
   context.textAlign = justification === 'center' ? 'center' : justification === 'right' || isRtl ? 'right' : 'left';
