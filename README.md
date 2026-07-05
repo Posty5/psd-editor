@@ -280,7 +280,9 @@ texts: {
 **Key behaviors:**
 
 - 🔄 **Auto-direction** — RTL/LTR is detected from content, not locked to the template
-- 📐 **Original size** — Replacement text keeps the font size defined by the PSD layer
+- 📦 **Paragraph boxes** — Text on a paragraph (box) layer wraps to the PSD text box and the font auto-shrinks so long strings fit instead of being clipped
+- ↔️ **Point text grows** — Text on a point layer keeps its anchor while the raster grows to fit longer strings
+- 📐 **Original size** — Replacement text starts from the font size defined by the PSD layer
 - 🔤 **System fonts** — Fonts referenced by the PSD must be installed on the OS
 
 > **Tip:** On Ubuntu, install fonts in `~/.local/share/fonts` or `/usr/local/share/fonts`, then run `fc-cache -f`.
