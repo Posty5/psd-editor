@@ -146,13 +146,14 @@ describe('Real template integration', () => {
     const result = await editor.edit({
       templatePath,
       images: {
-        IMAGE_1: path.join(imagesDir, 'img1.jpg'),
-        IMAGE_2: path.join(imagesDir, 'img2.jpg'),
-        IMAGE_3: path.join(imagesDir, 'img3.jpg'),
-        'Posty5/front/Image_Logo': path.join(imagesDir, 'logo.png')
+        ArticleImage1: path.join(imagesDir, 'img1.jpg'),
+        ArticleImage2: path.join(imagesDir, 'img2.jpg'),
+        ArticleImage3: path.join(imagesDir, 'img3.jpg'),
+        'GEO Logo/GEOLogo': path.join(imagesDir, 'logo.png')
       },
       texts: {
-        TITLE_1: 'Hello from psd-editor!'
+        'Title/TITLE_1': 'As you know we relay love P O S T Y 5 . C O M',
+        platformUserName:"TrendDigestUk"
       },
       scale: 2,
       outputFormat: 'jpeg',
